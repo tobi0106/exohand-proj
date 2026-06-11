@@ -1,0 +1,156 @@
+# Finger Counter - Learn by Building
+
+## Step-by-Step Learning Guide
+
+This guide will help you build a finger counter from scratch, learning Python concepts along the way.
+
+---
+
+## Step 1: Imports & Setup (Basic Concept)
+
+First, let's understand what we're importing:
+- **cv2** (OpenCV): A library for working with images and video from cameras
+- **mediapipe**: A library that can detect hands in images
+- **numpy**: A library for working with numbers/arrays
+
+```python
+import cv2
+import mediapipe as mp
+import numpy as np
+
+# These lines set up MediaPipe to detect hands
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands()
+mp_drawing = mp.solutions.drawing_utils
+```
+
+**Concept**: `import` brings in code that other people wrote so we can use it.
+
+---
+
+## Step 2: Access Your Camera (Simple & Important)
+
+```python
+cap = cv2.VideoCapture(0)  # 0 means the default camera
+
+# This loop runs continuously
+while True:
+    ret, frame = cap.read()  # Grab a frame from the camera
+    if not ret:
+        break  # Stop if camera fails
+    
+    # 'frame' is now an image from your camera
+    # You can show it:
+    cv2.imshow("Camera", frame)
+    
+    # Press 'q' to quit
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+```
+
+**Concept**: 
+- `while True:` creates a loop that keeps running
+- `ret` tells us if we got a frame successfully
+- `frame` is the actual image data
+- `cv2.imshow()` displays the image in a window
+
+---
+
+## Step 3: Detect Hands (The Magic!)
+
+Once you have a frame from the camera, you send it to MediaPipe to detect hands:
+
+```python
+# Convert the frame to RGB (MediaPipe needs this format)
+rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+# Ask MediaPipe: "Do you see any hands in this image?"
+results = hands.process(rgb_frame)
+
+# Check if any hands were detected
+if results.multi_hand_landmarks:
+    print("I see a hand!")
+    # results.multi_hand_landmarks contains the hand positions
+```
+
+**Concept**: 
+- `results` contains information about detected hands
+- If it's empty, no hands were found
+- If it has data, hands were detected!
+
+---
+
+## Step 4: Draw Hand Landmarks (Visualize!)
+
+Once MediaPipe finds a hand, it gives us 21 points on the hand:
+
+```python
+if results.multi_hand_landmarks:
+    for hand_landmarks in results.multi_hand_landmarks:
+        # Draw all the points and connections on the frame
+        mp_drawing.draw_landmarks(
+            frame,
+            hand_landmarks,
+            mp_hands.HAND_CONNECTIONS
+        )
+```
+
+**Concept**:
+- `for hand_landmarks in results.multi_hand_landmarks:` loops through each detected hand
+- MediaPipe has a built-in drawing function that saves us time
+
+---
+
+## Step 5: Count Fingers (The Logic!)
+
+Now comes the interesting part. We need to figure out which fingers are up:
+
+```python
+def count_fingers(landmarks):
+    '''
+    landmarks = the 21 points on the hand
+    Returns: how many fingers are raised
+    '''
+    
+    fingers_up = 0
+    
+    # Check THUMB: Is it extended?
+    # Thumb is to the right if the x-coordinate is smaller (remember, camera is flipped)
+    if landmarks[4].x < landmarks[3].x:
+        fingers_up += 1
+    
+    # Check OTHER FINGERS: Are they extended?
+    # For each finger, check if the tip (landmarks[8,12,16,20]) 
+    # is higher than the middle knuckle (landmarks[6,10,14,18])
+    
+    finger_tips = [8, 12, 16, 20]      # Index, middle, ring, pinky tips
+    finger_knuckles = [6, 10, 14, 18]  # Index, middle, ring, pinky knuckles
+    
+    for tip, knuckle in zip(finger_tips, finger_knuckles):
+        if landmarks[tip].y < landmarks[knuckle].y:
+            # y is smaller means it's higher on the screen
+            fingers_up += 1
+    
+    return fingers_up
+```
+
+**Concept**:
+- A function is a reusable block of code
+- `landmarks[4]` gets the 4th point on the hand (you can print them to see what each is)
+- `.x` and `.y` are the horizontal and vertical position
+- `zip()` lets us loop through two lists together
+
+---
+
+## Building It Step By Step
+
+Now you can build this! Here's the recommended order:
+
+1. **Start with Step 1 & 2**: Get the camera working
+2. **Add Step 3**: Detect hands
+3. **Add Step 4**: Draw landmarks
+4. **Add Step 5**: Count fingers
+5. **Combine it all**: Make it work together
